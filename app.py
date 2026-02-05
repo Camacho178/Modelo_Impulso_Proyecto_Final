@@ -419,6 +419,23 @@ st.markdown("""
         color: #16337b !important;
     }
 
+    /* MULTISELECT (SEGMENTACIÓN) */
+    .stMultiSelect label {
+        color: #16337b !important;
+        font-weight: 600 !important;
+    }
+
+    .stMultiSelect [data-baseweb="select"] > div {
+        background: #f5f7fb !important;
+        border-color: #dbe3eb !important;
+        color: #16337b !important;
+    }
+
+    .stMultiSelect [data-baseweb="select"] span,
+    .stMultiSelect [data-baseweb="select"] input {
+        color: #16337b !important;
+    }
+
     /* ALERTAS */
     .alert-box {
         background-color: #dbe3eb;
