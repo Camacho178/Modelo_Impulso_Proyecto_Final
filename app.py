@@ -291,6 +291,60 @@ st.markdown("""
         font-weight: 700;
     }
 
+    /* STATUS CARDS (EMPLEADOS) */
+    .status-card {
+        background: white;
+        padding: 16px 18px;
+        border-radius: 14px;
+        box-shadow: 0 4px 12px rgba(0,0,0,0.08);
+        border: 1px solid #e9edf3;
+        min-height: 110px;
+    }
+
+    .status-title {
+        font-size: 12px;
+        color: #7a8aa0;
+        font-weight: 700;
+        letter-spacing: 0.04em;
+        text-transform: uppercase;
+    }
+
+    .status-pill {
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        font-size: 13px;
+        font-weight: 700;
+        color: #16337b;
+    }
+
+    .status-dot {
+        width: 10px;
+        height: 10px;
+        border-radius: 50%;
+        background: #2ecc71;
+        box-shadow: 0 0 0 4px rgba(46, 204, 113, 0.16);
+        display: inline-block;
+    }
+
+    .status-dot.inactive {
+        background: #b5b5b5;
+        box-shadow: 0 0 0 4px rgba(181, 181, 181, 0.18);
+    }
+
+    .status-value {
+        font-size: 28px;
+        font-weight: 700;
+        color: #16337b;
+        margin-top: 6px;
+    }
+
+    .status-sub {
+        font-size: 12px;
+        color: #7a8aa0;
+        margin-top: 2px;
+    }
+
     /* EMPLEADOS */
     .employee-card {
         background: white;
@@ -329,6 +383,24 @@ st.markdown("""
         font-weight: 700;
         font-size: 13px;
         flex: 0 0 auto;
+        position: relative;
+    }
+
+    .presence-dot {
+        position: absolute;
+        right: -2px;
+        bottom: -2px;
+        width: 10px;
+        height: 10px;
+        border-radius: 50%;
+        background: #2ecc71;
+        border: 2px solid white;
+        box-shadow: 0 0 0 2px rgba(46, 204, 113, 0.18);
+    }
+
+    .presence-dot.inactive {
+        background: #b5b5b5;
+        box-shadow: 0 0 0 2px rgba(181, 181, 181, 0.2);
     }
 
     .employee-name {
@@ -678,6 +750,8 @@ last = name_rng.choice(last_names, n)
 df["employee_name"] = [f"{f} {l}" for f, l in zip(first, last)]
 df["employee_role"] = [name_rng.choice(roles_by_dept[d]) for d in df["department"]]
 df["employee_id"] = np.arange(1, n + 1)
+status_rng = np.random.default_rng(2026)
+df["active_status"] = status_rng.choice(["Activo", "Inactivo"], size=n, p=[0.86, 0.14])
 
 # ============================================
 # 2. ENTRENAR MODELO
@@ -943,6 +1017,44 @@ with tabs[1]:
     st.markdown("<div class='fade-in'>", unsafe_allow_html=True)
     st.markdown("<div class='section-title'>Empleados</div>", unsafe_allow_html=True)
 
+    total_employees = int(df.shape[0])
+    active_count = int((df["active_status"] == "Activo").sum())
+    inactive_count = int((df["active_status"] == "Inactivo").sum())
+    active_pct = (active_count / total_employees * 100) if total_employees else 0
+    inactive_pct = (inactive_count / total_employees * 100) if total_employees else 0
+
+    s1, s2, s3 = st.columns([1.6, 1, 1])
+    s1.markdown(
+        f"""
+<div class='status-card'>
+    <div class='status-title'>Total Empleados</div>
+    <div class='status-value'>{total_employees}</div>
+    <div class='status-sub'>En la base de datos</div>
+</div>
+        """,
+        unsafe_allow_html=True
+    )
+    s2.markdown(
+        f"""
+<div class='status-card'>
+    <div class='status-pill'><span class='status-dot'></span>Activos</div>
+    <div class='status-value'>{active_count}</div>
+    <div class='status-sub'>{active_pct:.1f}% de la base</div>
+</div>
+        """,
+        unsafe_allow_html=True
+    )
+    s3.markdown(
+        f"""
+<div class='status-card'>
+    <div class='status-pill'><span class='status-dot inactive'></span>Inactivos</div>
+    <div class='status-value'>{inactive_count}</div>
+    <div class='status-sub'>{inactive_pct:.1f}% de la base</div>
+</div>
+        """,
+        unsafe_allow_html=True
+    )
+
     f1, f2, f3 = st.columns([2, 1, 1])
     search_query = f1.text_input("Buscar empleado", placeholder="Buscar empleado...", key="emp_search")
     dept_options = ["Todos"] + sorted(df["department"].unique())
@@ -979,13 +1091,14 @@ with tabs[1]:
             for row in list_df.head(10).itertuples(index=False):
                 name_parts = row.employee_name.split()
                 initials = name_parts[0][0] + (name_parts[-1][0] if len(name_parts) > 1 else "")
+                presence_class = "inactive" if row.active_status == "Inactivo" else ""
                 risk_class = "risk-low" if row.risk_level == "Bajo" else "risk-mid" if row.risk_level == "Medio" else "risk-high"
                 card_class = "employee-card selected" if row.employee_id == selected_emp_id else "employee-card"
 
                 card_html = f"""
 <div class='{card_class}'>
     <div class='employee-left'>
-        <div class='employee-avatar'>{initials}</div>
+        <div class='employee-avatar'>{initials}<span class='presence-dot {presence_class}'></span></div>
         <div>
             <div class='employee-name'>{row.employee_name}</div>
             <div class='employee-role'>{row.employee_role} · {row.department}</div>
@@ -1010,12 +1123,16 @@ with tabs[1]:
 
             emp = df_emp[df_emp["employee_id"] == selected_id].iloc[0]
             risk_class = "risk-low" if emp["risk_level"] == "Bajo" else "risk-mid" if emp["risk_level"] == "Medio" else "risk-high"
+            emp_status_class = "inactive" if emp["active_status"] == "Inactivo" else ""
 
             st.markdown(
                 f"""
 <div class='profile-card'>
     <div class='profile-title'>{emp['employee_name']}</div>
     <div class='profile-sub'>{emp['employee_role']} · {emp['department']}</div>
+    <div class='profile-sub'>
+        <span class='status-pill'><span class='status-dot {emp_status_class}'></span>{emp['active_status']}</span>
+    </div>
     <span class='risk-pill {risk_class}'>Riesgo {emp['risk_level']}</span>
 </div>
                 """,
